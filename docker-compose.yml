@@ -1,0 +1,68 @@
+# This is a docker-compose file that is used to run the backend and database in the same network.
+services:
+  # Backend Spring Boot application
+  app:
+    container_name: todo-container
+    # Build the Docker image from the Dockerfile in the current directory.
+    build: .
+    
+    # Expose port 8080 to host machine
+    ports:
+      - "8080:8080"
+    
+    # Define the dependencies of the app service.
+    depends_on:
+      - postgresqldb
+      # This is service name, you can set any service names instead of postgresqldb.
+    
+    # Define environment variables for the app service.
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgresqldb:5432/postgres
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 2480
+      # In your backend application.properties file, change the database URL
+      # from localhost to the service name "postgresqldb" defined in this file.
+      # E.g., spring.datasource.url=jdbc:postgresql://postgresqldb:5432/todo_management
+    
+    # Connect the app service to the custom network "app_network".
+    networks:
+      - app_network
+  
+  # PostgreSQL database service
+  postgresqldb:
+    # Use the official postgres image from the Docker Hub registry.
+    image: postgres:15
+
+    container_name: postgres-container
+    # Mount a volume to persist the data. The volume is created using the postgres_data volume driver.
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      # POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD are environment variables that are used to create a database, user, and password in the postgres container.
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 2480
+      
+    # Expose port 5432 to host machine
+    ports:
+      - "5432:5432"
+
+    # Define a health check for the postgresqldb service.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    # Connect the postgresqldb service to the custom network "app_network". 
+    networks:
+      - app_network
+
+# Create a volume to persist the data
+volumes:
+  postgres_data:
+
+# Define a custom network
+networks:
+  app_network:
+    driver: bridge
